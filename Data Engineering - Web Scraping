@@ -1,0 +1,35 @@
+from bs4 import BeautifulSoup
+import html5lib
+import requests
+import pandas as pd
+
+#Extract data using Web Scraping
+url = "https://web.archive.org/web/20200318083015/https://en.wikipedia.org/wiki/List_of_largest_banks"
+response = requests.get(url)
+html_data = response.text
+
+html_data[760:783]
+
+#scraping the data
+soup= BeautifulSoup(html_data, 'html.parser')
+table = soup.find('span', {'id': 'By_market_capitalization'}).find_next('table')
+
+data = pd.DataFrame(columns=["Name", "Market Cap (US$ Billion)"])
+headers = [header.get_text(strip=True) for header in table.find_all('th')]
+for row in soup.find_all('tbody')[2].find_all('tr'):
+    col = row.find_all('td')
+    if len(col) >= 3:  # Ensure that there are at least three columns in the row
+        bank_name = col[1].get_text(strip=True)
+        market_cap = col[2].get_text(strip=True).replace(',', '')  # Remove commas for uniformity
+        data = data.append({"Name": bank_name, "Market Cap (US$ Billion)": market_cap}, ignore_index=True)
+    else:
+        print(f"Skipped a row with {len(col)} columns.")
+print(data)
+
+data.head(5)
+
+#loading the data
+json_data = data.to_json(orient='records', date_format='iso')
+
+# Print the JSON data
+print(json_data)
